@@ -2,12 +2,11 @@
 , fetchFromGitHub
 , lib
 , esbuild
-, buildGoModule
 , buildWebExtension ? false
 }:
 let
-  version = "1.5.6";
-  gitHash = "925d709";
+  version = "1.6.4";
+  gitHash = "6bbf562";
 in
 buildNpmPackage rec {
   pname = "vencord";
@@ -17,27 +16,25 @@ buildNpmPackage rec {
     owner = "Vendicated";
     repo = "Vencord";
     rev = "v${version}";
-    hash = "sha256-0vYnhDy7J+JFg6uMtwK+uQsHtxoXi8QskIqyQm1HsqM=";
+    hash = "sha256-JL6UwxI4lSkxWfrps1Z2Q97LrzU4Hp6zs8kK2MdqXs8=";
   };
 
-  ESBUILD_BINARY_PATH = lib.getExe (esbuild.override {
-    buildGoModule = args: buildGoModule (args // rec {
-      version = "0.15.18";
-      src = fetchFromGitHub {
-        owner = "evanw";
-        repo = "esbuild";
-        rev = "v${version}";
-        hash = "sha256-b9R1ML+pgRg9j2yrkQmBulPuLHYLUQvW+WTyR/Cq6zE=";
-      };
-      vendorHash = "sha256-+BfxCyg0KkDQpHt/wycy/8CTG6YBA/VJvJFhhzUnSiQ=";
-    });
-  });
+  ESBUILD_BINARY_PATH = lib.getExe (esbuild.overrideAttrs (final: _: {
+    version = "0.15.18";
+    src = fetchFromGitHub {
+      owner = "evanw";
+      repo = "esbuild";
+      rev = "v${final.version}";
+      hash = "sha256-b9R1ML+pgRg9j2yrkQmBulPuLHYLUQvW+WTyR/Cq6zE=";
+    };
+    vendorHash = "sha256-+BfxCyg0KkDQpHt/wycy/8CTG6YBA/VJvJFhhzUnSiQ=";
+  }));
 
   # Supresses an error about esbuild's version.
   npmRebuildFlags = [ "|| true" ];
 
   makeCacheWritable = true;
-  npmDepsHash = "sha256-/oMQHIigAY7Jdy6S1lRXjzOnxYrvpzbyvP4z+s+k9Lw=";
+  npmDepsHash = "sha256-nb72XkNlMRJL7BcTh3lf7s0jigRj5F5TeY9xuGAdVsk=";
   npmFlags = [ "--legacy-peer-deps" ];
   npmBuildScript = if buildWebExtension then "buildWeb" else "build";
   npmBuildFlags = [ "--" "--standalone" "--disable-updater" ];
@@ -56,6 +53,8 @@ buildNpmPackage rec {
     '' else ''
       cp -r dist/ $out
     '';
+
+  passthru.updateScript = ./update.sh;
 
   meta = with lib; {
     description = "Vencord web extension";

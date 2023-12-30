@@ -90,11 +90,11 @@ in
 
 stdenv.mkDerivation rec {
   pname = "brave";
-  version = "1.59.117";
+  version = "1.61.109";
 
   src = fetchurl {
     url = "https://github.com/brave/brave-browser/releases/download/v${version}/brave-browser_${version}_amd64.deb";
-    sha256 = "sha256-yckxTKAgglk6YRXist9RZufZdI22iitecmb01NmYPGQ=";
+    hash = "sha256-vIi205FqgoQEZCV4iWCFxjH2hJNWH9HjRU94jt7Ee8A=";
   };
 
   dontConfigure = true;
@@ -203,7 +203,7 @@ stdenv.mkDerivation rec {
     '';
     sourceProvenance = with sourceTypes; [ binaryNativeCode ];
     license = licenses.mpl20;
-    maintainers = with maintainers; [ uskudnik rht jefflabonte nasirhm ];
+    maintainers = with maintainers; [ uskudnik rht jefflabonte nasirhm buckley310 ];
     platforms = [ "x86_64-linux" ];
   };
 }

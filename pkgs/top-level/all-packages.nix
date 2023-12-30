@@ -1528,6 +1528,8 @@ with pkgs;
 
   dolbybcsoftwaredecode = callPackage ../applications/audio/dolbybcsoftwaredecode { };
 
+  dualsensectl = callPackage ../tools/games/dualsensectl { };
+
   dwarfs = callPackage ../tools/filesystems/dwarfs { };
 
   etlegacy = callPackage ../games/etlegacy { lua = lua5_4; };
@@ -4763,7 +4765,7 @@ with pkgs;
 
   element-desktop = callPackage ../applications/networking/instant-messengers/element/element-desktop.nix {
     inherit (darwin.apple_sdk.frameworks) Security AppKit CoreServices;
-    electron = electron_26;
+    electron = electron_27;
   };
   element-desktop-wayland = writeScriptBin "element-desktop" ''
     #!/bin/sh
@@ -5700,7 +5702,7 @@ with pkgs;
   pn = callPackage ../tools/text/pn { };
 
   pocket-casts = callPackage ../applications/audio/pocket-casts {
-    electron = electron_22;
+    electron = electron_27;
   };
 
   portal = callPackage ../tools/misc/portal { };
@@ -7941,7 +7943,9 @@ with pkgs;
 
   gitlab-pages = callPackage ../applications/version-management/gitlab/gitlab-pages { };
 
-  gitlab-runner = callPackage ../development/tools/continuous-integration/gitlab-runner { };
+  gitlab-runner = callPackage ../development/tools/continuous-integration/gitlab-runner {
+    buildGoModule = buildGo120Module;
+  };
 
   gitlab-shell = callPackage ../applications/version-management/gitlab/gitlab-shell { };
 
@@ -9441,6 +9445,10 @@ with pkgs;
   };
 
   mdbook-admonish = callPackage ../tools/text/mdbook-admonish {
+    inherit (darwin.apple_sdk.frameworks) CoreServices;
+  };
+
+  mdbook-footnote = callPackage ../tools/text/mdbook-footnote {
     inherit (darwin.apple_sdk.frameworks) CoreServices;
   };
 
@@ -10962,9 +10970,7 @@ with pkgs;
 
   optifine = optifinePackages.optifine-latest;
 
-  optipng = callPackage ../tools/graphics/optipng {
-    libpng = libpng12;
-  };
+  optipng = callPackage ../tools/graphics/optipng { };
 
   olsrd = callPackage ../tools/networking/olsrd { };
 
@@ -16317,6 +16323,10 @@ with pkgs;
     inherit (darwin.apple_sdk.frameworks) CoreFoundation Security SystemConfiguration;
     llvm_15 = llvmPackages_15.libllvm;
   };
+  rust_1_70 = callPackage ../development/compilers/rust/1_70.nix {
+    inherit (darwin.apple_sdk.frameworks) CoreFoundation Security SystemConfiguration;
+    llvm_15 = llvmPackages_15.libllvm;
+  };
   rust = rust_1_69;
 
   mrustc = callPackage ../development/compilers/mrustc { };
@@ -16326,6 +16336,7 @@ with pkgs;
   };
 
   rustPackages_1_69 = rust_1_69.packages.stable;
+  rustPackages_1_70 = rust_1_70.packages.stable;
   rustPackages = rustPackages_1_69;
 
   inherit (rustPackages) cargo cargo-auditable cargo-auditable-cargo-wrapper clippy rustc rustPlatform;
@@ -17764,7 +17775,8 @@ with pkgs;
     electron_23-bin
     electron_24-bin
     electron_25-bin
-    electron_26-bin;
+    electron_26-bin
+    electron_27-bin;
 
   electron = electron-bin;
   electron_9 = electron_9-bin;
@@ -17785,6 +17797,7 @@ with pkgs;
   electron_24 = electron_24-bin;
   electron_25 = electron_25-bin;
   electron_26 = electron_26-bin;
+  electron_27 = electron_27-bin;
 
   autobuild = callPackage ../development/tools/misc/autobuild { };
 
@@ -26434,9 +26447,7 @@ with pkgs;
 
   zookeeper = callPackage ../servers/zookeeper { };
 
-  zookeeper_mt = callPackage ../development/libraries/zookeeper_mt {
-    openssl = openssl_1_1;
-  };
+  zookeeper_mt = callPackage ../development/libraries/zookeeper_mt { };
 
   xqilla = callPackage ../development/tools/xqilla { stdenv = gcc10StdenvCompat; };
 
@@ -27103,6 +27114,8 @@ with pkgs;
   linux_6_1_hardened = linuxKernel.kernels.linux_6_1_hardened;
   linuxPackages_6_5_hardened = linuxKernel.packages.linux_6_5_hardened;
   linux_6_5_hardened = linuxKernel.kernels.linux_6_5_hardened;
+  linuxPackages_6_6_hardened = linuxKernel.packages.linux_6_6_hardened;
+  linux_6_6_hardened = linuxKernel.kernels.linux_6_6_hardened;
 
   # Hardkernel (Odroid) kernels.
   linuxPackages_hardkernel_latest = linuxKernel.packageAliases.linux_hardkernel_latest;
@@ -29198,8 +29211,6 @@ with pkgs;
   adl = callPackage ../applications/video/adl { };
 
   appvm = callPackage ../applications/virtualization/appvm { };
-
-  yggdrasil = callPackage ../tools/networking/yggdrasil { };
 
   masterpdfeditor = libsForQt5.callPackage ../applications/misc/masterpdfeditor { };
 

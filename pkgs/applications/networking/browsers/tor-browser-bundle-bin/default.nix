@@ -2,12 +2,9 @@
 , fetchurl
 , makeDesktopItem
 , writeText
+, autoPatchelfHook
 , callPackage
 
-# Common run-time dependencies
-, zlib
-
-# libxul run-time dependencies
 , atk
 , cairo
 , dbus
@@ -22,19 +19,35 @@
 , libXext
 , libXrender
 , libXt
+, libXtst
+, mesa
 , pango
+, pciutils
+, zlib
+
+, libnotifySupport ? stdenv.isLinux
+, libnotify
+
+, waylandSupport ? stdenv.isLinux
+, libxkbcommon
+, libdrm
 
 , audioSupport ? mediaSupport
-, pulseaudioSupport ? mediaSupport
+
+, pipewireSupport ? audioSupport
+, pipewire
+
+, pulseaudioSupport ? audioSupport
 , libpulseaudio
 , apulse
 , alsa-lib
 
+, libvaSupport ? mediaSupport
+, libva
+
 # Media support (implies audio support)
 , mediaSupport ? true
 , ffmpeg
-
-, gmp
 
 # Wrapper runtime
 , coreutils
@@ -60,61 +73,59 @@ lib.warnIf (useHardenedMalloc != null)
   "tor-browser-bundle-bin: useHardenedMalloc is deprecated and enabling it can cause issues"
 
 (let
-  libPath = lib.makeLibraryPath libPkgs;
+  libPath = lib.makeLibraryPath (
+    [
+      alsa-lib
+      atk
+      cairo
+      dbus
+      dbus-glib
+      fontconfig
+      freetype
+      gdk-pixbuf
+      glib
+      gtk3
+      libxcb
+      libX11
+      libXext
+      libXrender
+      libXt
+      libXtst
+      mesa # for libgbm
+      pango
+      pciutils
+      stdenv.cc.cc
+      stdenv.cc.libc
+      zlib
+    ] ++ lib.optionals libnotifySupport [ libnotify ]
+      ++ lib.optionals waylandSupport [ libxkbcommon libdrm ]
+      ++ lib.optionals pipewireSupport [ pipewire ]
+      ++ lib.optionals pulseaudioSupport [ libpulseaudio ]
+      ++ lib.optionals libvaSupport [ libva ]
+      ++ lib.optionals mediaSupport [ ffmpeg ]
+  );
 
-  libPkgs = [
-    alsa-lib
-    atk
-    cairo
-    dbus
-    dbus-glib
-    fontconfig
-    freetype
-    gdk-pixbuf
-    glib
-    gtk3
-    libxcb
-    libX11
-    libXext
-    libXrender
-    libXt
-    pango
-    stdenv.cc.cc
-    stdenv.cc.libc
-    zlib
-  ]
-  ++ lib.optionals pulseaudioSupport [ libpulseaudio ]
-  ++ lib.optionals mediaSupport [
-    ffmpeg
-  ];
-
-  # Library search path for the fte transport
-  fteLibPath = lib.makeLibraryPath [ stdenv.cc.cc gmp ];
-
-  # Upstream source
-  version = "12.5.6";
-
-  lang = "ALL";
+  version = "13.0.6";
 
   sources = {
     x86_64-linux = fetchurl {
       urls = [
-        "https://dist.torproject.org/torbrowser/${version}/tor-browser-linux64-${version}_${lang}.tar.xz"
-        "https://archive.torproject.org/tor-package-archive/torbrowser/${version}/tor-browser-linux64-${version}_${lang}.tar.xz"
-        "https://tor.eff.org/dist/torbrowser/${version}/tor-browser-linux64-${version}_${lang}.tar.xz"
-        "https://tor.calyxinstitute.org/dist/torbrowser/${version}/tor-browser-linux64-${version}_${lang}.tar.xz"
+        "https://archive.torproject.org/tor-package-archive/torbrowser/${version}/tor-browser-linux-x86_64-${version}.tar.xz"
+        "https://dist.torproject.org/torbrowser/${version}/tor-browser-linux-x86_64-${version}.tar.xz"
+        "https://tor.eff.org/dist/torbrowser/${version}/tor-browser-linux-x86_64-${version}.tar.xz"
+        "https://tor.calyxinstitute.org/dist/torbrowser/${version}/tor-browser-linux-x86_64-${version}.tar.xz"
       ];
-      hash = "sha256-lZlGhyGDT9Vxox3ghfFSIZd3sazNyL23k0UtipaIGR8=";
+      hash = "sha256-7T+PJEsGIge+JJOz6GiG8971lnnbQL2jdHfldNmT4jQ=";
     };
 
     i686-linux = fetchurl {
       urls = [
-        "https://dist.torproject.org/torbrowser/${version}/tor-browser-linux32-${version}_${lang}.tar.xz"
-        "https://archive.torproject.org/tor-package-archive/torbrowser/${version}/tor-browser-linux32-${version}_${lang}.tar.xz"
-        "https://tor.eff.org/dist/torbrowser/${version}/tor-browser-linux32-${version}_${lang}.tar.xz"
-        "https://tor.calyxinstitute.org/dist/torbrowser/${version}/tor-browser-linux32-${version}_${lang}.tar.xz"
+        "https://archive.torproject.org/tor-package-archive/torbrowser/${version}/tor-browser-linux-i686-${version}.tar.xz"
+        "https://dist.torproject.org/torbrowser/${version}/tor-browser-linux-i686-${version}.tar.xz"
+        "https://tor.eff.org/dist/torbrowser/${version}/tor-browser-linux-i686-${version}.tar.xz"
+        "https://tor.calyxinstitute.org/dist/torbrowser/${version}/tor-browser-linux-i686-${version}.tar.xz"
       ];
-      hash = "sha256-3Z3S6P3wkZeC/lhgO7XDdDDQ6cpyOX+e3SBuh47aMl8=";
+      hash = "sha256-nPhzUu1BYNij3toNRUFFxNVLZ2JnzDBFVlzo4cyskjY=";
     };
   };
 
@@ -136,6 +147,14 @@ stdenv.mkDerivation rec {
   inherit version;
 
   src = sources.${stdenv.hostPlatform.system} or (throw "unsupported system: ${stdenv.hostPlatform.system}");
+
+  nativeBuildInputs = [ autoPatchelfHook ];
+  buildInputs = [
+    gtk3
+    alsa-lib
+    dbus-glib
+    libXtst
+  ];
 
   preferLocalBuild = true;
   allowSubstitutes = false;
@@ -343,15 +362,11 @@ stdenv.mkDerivation rec {
     # chance that TBB would continue using old font files.
     rm -rf "\$HOME/.cache/fontconfig"
 
-    # Workaround a bug in 12.0.X that Tor directories are not cleaned up and tor gets confused where its socket is
-    rm -rf \$XDG_RUNTIME_DIR/Tor*
-
     # Manually specify data paths (by default TB attempts to create these in the store)
     {
       echo "user_pref(\"extensions.torlauncher.toronionauthdir_path\", \"\$HOME/TorBrowser/Data/Tor/onion-auth\");"
       echo "user_pref(\"extensions.torlauncher.torrc_path\", \"\$HOME/TorBrowser/Data/Tor/torrc\");"
       echo "user_pref(\"extensions.torlauncher.tordatadir_path\", \"\$HOME/TorBrowser/Data/Tor\");"
-      echo "user_pref(\"network.proxy.socks\", \"file://\$XDG_RUNTIME_DIR/Tor/socks.socket\");"
     } >> "\$HOME/TorBrowser/Data/Browser/profile.default/prefs.js"
 
     # Lift-off
@@ -477,7 +492,7 @@ stdenv.mkDerivation rec {
     # MPL2.0+, GPL+, &c.  While it's not entirely clear whether
     # the compound is "libre" in a strict sense (some components place certain
     # restrictions on redistribution), it's free enough for our purposes.
-    license = licenses.free;
+    license = with licenses; [ mpl20 lgpl21Plus lgpl3Plus free ];
     sourceProvenance = with sourceTypes; [ binaryNativeCode ];
   };
 })

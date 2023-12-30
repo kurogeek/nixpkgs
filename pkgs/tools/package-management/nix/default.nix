@@ -111,6 +111,13 @@ let
     hash = "sha256-s1ybRFCjQaSGj7LKu0Z5g7UiHqdJGeD+iPoQL0vaiS0=";
   };
 
+  patch-rapidcheck-shared = fetchpatch2 {
+    # https://github.com/NixOS/nix/pull/9431
+    name = "fix-requires-non-existing-output.patch";
+    url = "https://github.com/NixOS/nix/commit/46131567da96ffac298b9ec54016b37114b0dfd5.patch";
+    hash = "sha256-lShYxYKRDWwBqCysAFmFBudhhAL1eendWcL8sEFLCGg=";
+  };
+
 in lib.makeExtensible (self: {
   nix_2_3 = (common rec {
     version = "2.3.16";
@@ -168,28 +175,40 @@ in lib.makeExtensible (self: {
   };
 
   nix_2_13 = common {
-    version = "2.13.5";
-    hash = "sha256-yHZMgMs/6/aQUwfMwmPUQov17JMGS7squLJsjmucnLc=";
+    version = "2.13.6";
+    hash = "sha256-pd2yGmHWn4njfbrSP6cMJx8qL+yeGieqcbLNICzcRFs=";
   };
 
   nix_2_14 = common {
     version = "2.14.1";
     hash = "sha256-5aCmGZbsFcLIckCDfvnPD4clGPQI7qYAqHYlttN/Wkg=";
+    patches = [
+      patch-rapidcheck-shared
+    ];
   };
 
   nix_2_15 = common {
-    version = "2.15.2";
-    hash = "sha256-0BxVsvp4JfliYu4EdpZ/zPYOt9Qn5w9Ix5r0sagZZ7o=";
+    version = "2.15.3";
+    hash = "sha256-sfFXbjC5iIdSAbctZIuFozxX0uux/KFBNr9oh33xINs=";
+    patches = [
+      patch-rapidcheck-shared
+    ];
   };
 
   nix_2_16 = common {
-    version = "2.16.1";
-    hash = "sha256-/XCWa2osNFIpPC5MkxlX6qTZf/DaTLwS3LWN0SRFiuU=";
+    version = "2.16.2";
+    hash = "sha256-VXIYCDkvAWeMoU0W2ZI0TeOszCZA1o8trz6YCPFD5ac=";
+    patches = [
+      patch-rapidcheck-shared
+    ];
   };
 
   nix_2_17 = common {
-    version = "2.17.0";
-    hash = "sha256-QMYAkdtU+g9HlZKtoJ+AI6TbWzzovKGnPZJHfZdclc8=";
+    version = "2.17.1";
+    hash = "sha256-Q5L+rHzjp0bYuR2ogg+YPCn6isjmlQ4CJVT0zpn/hFc=";
+    patches = [
+      patch-rapidcheck-shared
+    ];
   };
 
   # The minimum Nix version supported by Nixpkgs

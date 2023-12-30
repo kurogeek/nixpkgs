@@ -1,5 +1,6 @@
 { stdenv
 , lib
+, fetchpatch
 , fetchFromGitHub
 , makeWrapper
 , autoreconfHook
@@ -41,13 +42,13 @@
 
 stdenv.mkDerivation rec {
   pname = "open-vm-tools";
-  version = "12.2.0";
+  version = "12.3.0";
 
   src = fetchFromGitHub {
     owner = "vmware";
     repo = "open-vm-tools";
     rev = "stable-${version}";
-    hash = "sha256-ikodKEvlg+QU0af8IjiMjhMyQSV6icHVUczf0rWfVaI=";
+    hash = "sha256-YVpWomLED5sBKXKdJtuDjb7/aKB2flVIm2ED3xSsccE=";
   };
 
   sourceRoot = "${src.name}/open-vm-tools";
@@ -88,6 +89,22 @@ stdenv.mkDerivation rec {
     libXrender
     libXrandr
     libXtst
+  ];
+
+  patches = [
+    (fetchpatch {
+      name = "CVE-2023-34058.patch";
+      url = "https://raw.githubusercontent.com/vmware/open-vm-tools/CVE-2023-34058.patch/CVE-2023-34058.patch";
+      hash = "sha256-KC99LzGcWTXUhtOLQ6UbqxGJ+0Uj4QLWyuRYeGle3a4=";
+      stripLen = 1;
+    })
+
+    (fetchpatch {
+      name = "CVE-2023-34059.patch";
+      url = "https://raw.githubusercontent.com/vmware/open-vm-tools/CVE-2023-34059.patch/CVE-2023-34059.patch";
+      hash = "sha256-RMQh1DyVdNlHbhUb9oGGUX0a2r6fUWN5urr0HlMlm2c=";
+      stripLen = 1;
+    })
   ];
 
   postPatch = ''
