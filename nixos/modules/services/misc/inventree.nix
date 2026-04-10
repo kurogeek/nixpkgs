@@ -207,7 +207,7 @@ in
 
           INVENTREE_CONFIG_FILE = lib.mkDefault "${cfg.dataDir}/config/config.yaml";
           INVENTREE_OIDC_PRIVATE_KEY_FILE = lib.mkDefault "${cfg.dataDir}/config/oidc_private_key.txt";
-          INVENTREE_STATIC_ROOT = lib.mkDefault "${cfg.dataDir}/data/static_root";
+          INVENTREE_STATIC_ROOT = lib.mkDefault "${cfg.package}/lib/inventree/static";
           INVENTREE_MEDIA_ROOT = lib.mkDefault "${cfg.dataDir}/data/media";
           INVENTREE_BACKUP_DIR = lib.mkDefault "${cfg.dataDir}/data/backups";
           INVENTREE_SITE_URL = lib.mkDefault "http://${cfg.domain}";
