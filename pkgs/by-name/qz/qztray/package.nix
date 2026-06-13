@@ -2,28 +2,46 @@
   lib,
   stdenv,
   fetchFromGitHub,
+  fetchurl,
+  unzip,
   jdk11,
   ant,
   openjfx17,
   makeWrapper,
-  copyDesktopItems,
-  makeDesktopItem,
-  imagemagick,
   libusb1,
   hidapi,
+  copyDesktopItems,
+  makeDesktopItem,
 }:
 
+# ---------------------------------------------------------------------------
+# QZ Tray 2.2.6 — the ant build (ant/javafx.xml) downloads two JavaFX zips:
+#   1. Regular SDK  → extracted into lib/javafx/linux/javafx-sdk-19/
+#   2. Monocle SDK  → saved as out/javafx-linux-x86_64-19_monocle.zip
+#
+# We pre-fetch both as fixed-output derivations and place them before ant
+# runs, so the build sandbox never needs network access.
+#
+# Hashes: run these and paste the output into the hash= fields below:
+#   nix-prefetch-url \
+#     https://download2.gluonhq.com/openjfx/19/openjfx-19_linux-x64_bin-sdk.zip
+#   nix-prefetch-url \
+#     https://download2.gluonhq.com/openjfx/19/openjfx-19_monocle-linux-x64_bin-sdk.zip
+#   nix-prefetch-url --unpack \
+#     https://github.com/qzind/tray/archive/refs/tags/v2.2.6.tar.gz
+# ---------------------------------------------------------------------------
 let
-  # JavaFX modules needed by QZ Tray
-  jfxModules = [
-    "javafx.base"
-    "javafx.controls"
-    "javafx.fxml"
-    "javafx.graphics"
-    "javafx.media"
-    "javafx.swing"
-    "javafx.web"
-  ];
+  jfxVersion = "19";
+
+  jfxSdk = fetchurl {
+    url = "https://download2.gluonhq.com/openjfx/${jfxVersion}/openjfx-${jfxVersion}_linux-x64_bin-sdk.zip";
+    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  };
+
+  jfxMonocle = fetchurl {
+    url = "https://download2.gluonhq.com/openjfx/${jfxVersion}/openjfx-${jfxVersion}_monocle-linux-x64_bin-sdk.zip";
+    hash = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=";
+  };
 
   desktopItem = makeDesktopItem {
     name = "qz-tray";
@@ -35,6 +53,16 @@ let
     startupNotify = false;
   };
 
+  jfxModules = lib.concatStringsSep "," [
+    "javafx.base"
+    "javafx.controls"
+    "javafx.fxml"
+    "javafx.graphics"
+    "javafx.media"
+    "javafx.swing"
+    "javafx.web"
+  ];
+
 in
 stdenv.mkDerivation rec {
   pname = "qz-tray";
@@ -44,17 +72,16 @@ stdenv.mkDerivation rec {
     owner = "qzind";
     repo = "tray";
     rev = "v${version}";
-    hash = "";
+    hash = "sha256-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=";
   };
 
   nativeBuildInputs = [
     jdk11
     ant
+    unzip
     makeWrapper
-    imagemagick # for icon conversion (optional)
-  ]
-  ++ lib.optional copyDesktopItems.meta.available copyDesktopItems;
-
+    copyDesktopItems
+  ];
   buildInputs = [
     jdk11
     openjfx17
@@ -62,33 +89,50 @@ stdenv.mkDerivation rec {
     hidapi
   ];
 
-  antFlags = [
-    # Tell the build which JavaFX directory to use (skips the download)
-    "-Dtarget.fx.dir=${openjfx17}/lib"
-    # Prevent ant from trying to download JavaFX from the internet
-    "-Djavafx.skip=true"
-    # Skip creating the self-extracting Linux installer
-    "-Djre.skip=true"
-    # Suppress signing (no cert available in the sandbox)
-    "-Dstorepass="
-    "-Dkeypass="
-    # Target OS for native-lib selection
-    "-Dtarget.os=linux"
-    "-Dtarget.arch=${if stdenv.isAarch64 then "aarch64" else "x64"}"
-    # Keep the build minimal (no whitelist/authcert)
-    "-Ddist.minimal=true"
-  ];
+  preBuild = ''
+    export JAVA_HOME="${jdk11}"
 
-  antTarget = "distribute";
+    # ------------------------------------------------------------------
+    # 1. Regular SDK — extracted into the path ant's check-javafx-found
+    #    looks for, so it skips the <get> download task.
+    # ------------------------------------------------------------------
+    mkdir -p lib/javafx/linux
+    unzip -q "${jfxSdk}" -d lib/javafx/linux
+    echo "Regular SDK: $(ls lib/javafx/linux/)"
 
-  # The build writes output into dist/ relative to the source root
+    # ------------------------------------------------------------------
+    # 2. Monocle SDK — the build downloads it unconditionally to a
+    #    hard-coded path under out/. Pre-place the file there so the
+    #    <get> task either finds it (if skipexisting="true") or we patch
+    #    the xml below to skip the task entirely.
+    # ------------------------------------------------------------------
+    mkdir -p out
+    cp "${jfxMonocle}" "out/javafx-linux-x86_64-${jfxVersion}_monocle.zip"
+
+    # ------------------------------------------------------------------
+    # 3. Patch javafx.xml to skip downloading when the destination file
+    #    already exists. We replace the bare <get> with one that has
+    #    skipexisting="true" so ant won't attempt the network call.
+    # ------------------------------------------------------------------
+    substituteInPlace ant/javafx.xml \
+      --replace-warn \
+        'taskdefs.Get$GetThread' \
+        'taskdefs.Get$GetThread' \
+      --replace-warn \
+        '<get src=' \
+        '<get skipexisting="true" src='
+  '';
+
   buildPhase = ''
     runHook preBuild
 
-    # Expose JDK for the build
-    export JAVA_HOME="${jdk11}"
-
-    ant ${antTarget} ${lib.concatStringsSep " " antFlags}
+    ant distribute \
+      -Dtarget.os=linux \
+      -Dtarget.arch=${if stdenv.isAarch64 then "aarch64" else "x64"} \
+      -Djre.skip=true \
+      -Ddist.minimal=true \
+      -Dstorepass= \
+      -Dkeypass=
 
     runHook postBuild
   '';
@@ -100,23 +144,15 @@ stdenv.mkDerivation rec {
     install -d "$out/bin"
     install -d "$out/share/pixmaps"
 
-    # Install the main JAR and any support files produced under dist/
-    cp -r dist/* "$out/share/qz-tray/"
+    cp -r dist/. "$out/share/qz-tray/"
 
-    # Install icon (convert SVG/PNG from assets if present)
-    if [ -f assets/branding/qz-tray.png ]; then
-      install -m644 assets/branding/qz-tray.png "$out/share/pixmaps/qz-tray.png"
-    elif [ -f assets/qz-tray.png ]; then
-      install -m644 assets/qz-tray.png "$out/share/pixmaps/qz-tray.png"
-    fi
+    for icon in assets/branding/qz-tray.png assets/qz-tray.png; do
+      [ -f "$icon" ] && install -m644 "$icon" "$out/share/pixmaps/qz-tray.png" && break
+    done
 
-    # Build the module-path string for JavaFX
-    local jfxPath="${openjfx17}/lib"
-
-    # Wrapper script
     makeWrapper "${jdk11}/bin/java" "$out/bin/qz-tray" \
-      --add-flags "--module-path $jfxPath" \
-      --add-flags "--add-modules ${lib.concatStringsSep "," jfxModules}" \
+      --add-flags "--module-path ${openjfx17}/lib" \
+      --add-flags "--add-modules ${jfxModules}" \
       --add-flags "-Djava.library.path=${libusb1}/lib:${hidapi}/lib" \
       --add-flags "-jar $out/share/qz-tray/qz-tray.jar" \
       --set JAVA_HOME "${jdk11}"
@@ -124,21 +160,12 @@ stdenv.mkDerivation rec {
     runHook postInstall
   '';
 
-  # Copy the desktop entry if copyDesktopItems is available
   desktopItems = [ desktopItem ];
 
   meta = with lib; {
     description = "Browser plugin for sending documents and raw commands to a printer or attached device";
-    longDescription = ''
-      QZ Tray is a desktop middleware that acts as a bridge between a web
-      browser and local or network printers, label makers, cash drawers, and
-      other hardware.  It exposes a WebSocket API so web applications can send
-      raw ESC/POS, ZPL, EPL, Star, and other command languages directly to the
-      device—without any browser extension.
-    '';
     homepage = "https://qz.io";
     license = licenses.lgpl21Plus;
-    maintainers = [ ];
     platforms = platforms.linux;
     mainProgram = "qz-tray";
   };
