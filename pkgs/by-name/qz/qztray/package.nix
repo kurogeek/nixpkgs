@@ -1,15 +1,16 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, jdk11
-, ant
-, openjfx11
-, makeWrapper
-, copyDesktopItems
-, makeDesktopItem
-, imagemagick
-, libusb1
-, hidapi
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  jdk11,
+  ant,
+  openjfx17,
+  makeWrapper,
+  copyDesktopItems,
+  makeDesktopItem,
+  imagemagick,
+  libusb1,
+  hidapi,
 }:
 
 let
@@ -34,7 +35,8 @@ let
     startupNotify = false;
   };
 
-in stdenv.mkDerivation rec {
+in
+stdenv.mkDerivation rec {
   pname = "qz-tray";
   version = "2.2.6";
 
@@ -42,32 +44,27 @@ in stdenv.mkDerivation rec {
     owner = "qzind";
     repo = "tray";
     rev = "v${version}";
-    # Replace with the real hash after running:
-    #   nix-prefetch-url --unpack https://github.com/qzind/tray/archive/refs/tags/v2.2.6.tar.gz
-    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    hash = "";
   };
 
   nativeBuildInputs = [
     jdk11
     ant
     makeWrapper
-    imagemagick   # for icon conversion (optional)
-  ] ++ lib.optional copyDesktopItems.meta.available copyDesktopItems;
+    imagemagick # for icon conversion (optional)
+  ]
+  ++ lib.optional copyDesktopItems.meta.available copyDesktopItems;
 
   buildInputs = [
     jdk11
-    openjfx11
+    openjfx17
     libusb1
     hidapi
   ];
 
-  # QZ Tray uses an Ant build system and expects to download JavaFX during
-  # the build.  We skip that step by pointing ant at the nixpkgs openjfx11
-  # package instead, and disable the platform-installer targets (nsis/makeself)
-  # so only the JAR + demo assets are produced.
   antFlags = [
     # Tell the build which JavaFX directory to use (skips the download)
-    "-Dtarget.fx.dir=${openjfx11}/lib"
+    "-Dtarget.fx.dir=${openjfx17}/lib"
     # Prevent ant from trying to download JavaFX from the internet
     "-Djavafx.skip=true"
     # Skip creating the self-extracting Linux installer
@@ -114,7 +111,7 @@ in stdenv.mkDerivation rec {
     fi
 
     # Build the module-path string for JavaFX
-    local jfxPath="${openjfx11}/lib"
+    local jfxPath="${openjfx17}/lib"
 
     # Wrapper script
     makeWrapper "${jdk11}/bin/java" "$out/bin/qz-tray" \
@@ -141,7 +138,7 @@ in stdenv.mkDerivation rec {
     '';
     homepage = "https://qz.io";
     license = licenses.lgpl21Plus;
-    maintainers = [];
+    maintainers = [ ];
     platforms = platforms.linux;
     mainProgram = "qz-tray";
   };
